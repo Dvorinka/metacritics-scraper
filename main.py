@@ -90,5 +90,5 @@ def get_movie_data(category: str, tmdb_id: int):
     }
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8000))  # Use Railway's PORT or default to 8000
+    port = int(os.getenv("PORT", 8080))  # Use Railway's PORT or default to 8000
     uvicorn.run(app, host="0.0.0.0", port=port)
