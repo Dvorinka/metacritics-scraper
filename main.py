@@ -2,6 +2,7 @@ from fastapi import FastAPI
 import requests
 from bs4 import BeautifulSoup
 import os
+import uvicorn
 
 app = FastAPI()
 
@@ -71,3 +72,7 @@ def get_movie_data(category: str, tmdb_id: int):
         "tmdb": tmdb_data,
         "metacritic": metacritic_data
     }
+
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 8000))  # Use Railway's PORT or default to 8000
+    uvicorn.run(app, host="0.0.0.0", port=port)
