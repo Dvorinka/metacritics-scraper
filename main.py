@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import requests
 from bs4 import BeautifulSoup
@@ -10,10 +11,10 @@ app = FastAPI()
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins (or specify your frontend URL)
+    allow_origins=["*"],  # Change this to ["https://spark.tdvorak.dev"] in production
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all HTTP methods
-    allow_headers=["*"],  # Allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 TMDB_API_KEY = "054582e9ee66adcbe911e0008aa482a8"
@@ -27,6 +28,11 @@ HEADERS = {
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
     'Referer': 'https://www.google.com'
 }
+
+# Serve the documentation HTML page
+@app.get("/")
+def read_root():
+    return FileResponse("index.html")
 
 def scrape_metacritic(url):
     """Scrapes Metacritic scores from the given URL."""
