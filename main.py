@@ -81,9 +81,7 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
         }
 
     url_with_year = f"{base_url}_{release_year}" if release_year else None
-    urls_to_try = [base_url]
-    if url_with_year:
-        urls_to_try.append(url_with_year)
+    urls_to_try = [url_with_year] if url_with_year else [base_url]
 
     for url in urls_to_try:
         try:
@@ -95,9 +93,6 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
 
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
-
-            # Debugging - Check the page structure
-            # print(soup.prettify())  # Uncomment if you need to inspect the page structure
 
             # Extract Scores
             critic_score = soup.select_one('rt-text[slot="criticsScore"]')
