@@ -66,10 +66,21 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
     """Scrapes Rotten Tomatoes critic and audience scores, along with certification status."""
     title_slug = title.lower().replace(" ", "_")
     
-    # Construct potential URLs
-    base_url = f"https://www.rottentomatoes.com/{category}/{title_slug}"
-    url_with_year = f"https://www.rottentomatoes.com/{category}/{title_slug}_{release_year}" if release_year else None
+    # Adjust URL construction based on category
+    if category == "movie":
+        base_url = f"https://www.rottentomatoes.com/m/{title_slug}"
+    elif category == "tv":
+        base_url = f"https://www.rottentomatoes.com/tv/{title_slug}"
+    else:
+        return {
+            "critic_score": "N/A",
+            "audience_score": "N/A",
+            "critic_certified_fresh": False,
+            "audience_certified_fresh": False,
+            "rotten_tomatoes_url": "N/A"
+        }
 
+    url_with_year = f"{base_url}_{release_year}" if release_year else None
     urls_to_try = [base_url]
     if url_with_year:
         urls_to_try.append(url_with_year)
