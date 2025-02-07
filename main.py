@@ -76,12 +76,17 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
 
     for url in urls_to_try:
         try:
+            print(f"Trying URL: {url}")  # Debugging line
             response = requests.get(url, headers=HEADERS, timeout=10)
             if response.status_code == 404:
+                print(f"404 error for {url}, trying next URL...")
                 continue  # Try the next URL if 404
 
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
+
+            # Debugging - Check the page structure
+            # print(soup.prettify())  # Uncomment if you need to inspect the page structure
 
             # Extract Scores
             critic_score = soup.select_one('rt-text[slot="criticsScore"]')
@@ -98,7 +103,8 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
                 "audience_certified_fresh": audience_certified,
                 "rotten_tomatoes_url": url
             }
-        except requests.RequestException:
+        except requests.RequestException as e:
+            print(f"Error fetching data for {url}: {e}")  # Debugging line
             continue  # Try the next URL if there's an error
 
     return {
