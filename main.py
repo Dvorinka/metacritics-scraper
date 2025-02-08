@@ -65,7 +65,7 @@ def scrape_metacritic(url):
 def scrape_rotten_tomatoes(category, title, release_year=None):
     """Scrapes Rotten Tomatoes critic and audience scores, along with certification status."""
     title_slug = title.lower().replace(" ", "_")
-    
+
     # Adjust URL construction based on category
     if category == "movie":
         base_url = f"https://www.rottentomatoes.com/m/{title_slug}"
@@ -113,6 +113,21 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
             print(f"Error fetching data for {url}: {e}")  # Debugging line
             continue  # Try the next URL if there's an error
 
+    # Try searching if no page is found
+    search_url = f"https://www.rottentomatoes.com/search?search={title_slug}"
+    try:
+        search_response = requests.get(search_url, headers=HEADERS, timeout=10)
+        search_response.raise_for_status()
+        search_soup = BeautifulSoup(search_response.text, 'html.parser')
+        search_result = search_soup.find('a', href=True, class_="sc-16f5xv5-0 gsyjbv")
+
+        if search_result:
+            movie_url = f"https://www.rottentomatoes.com{search_result['href']}"
+            print(f"Found search result: {movie_url}")
+            return scrape_rotten_tomatoes(category, title, release_year)
+    except requests.RequestException:
+        print(f"Error searching for {title_slug} on Rotten Tomatoes.")
+        
     return {
         "critic_score": "N/A",
         "audience_score": "N/A",
