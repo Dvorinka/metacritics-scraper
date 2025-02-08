@@ -97,6 +97,7 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
                 # If we tried the URL with the year and got 404, now try the base URL without it
                 if url == url_with_year:
                     response = requests.get(base_url, headers=HEADERS, timeout=10)
+                    url = base_url  # Update the URL to base URL since the year-based URL failed
                 response.raise_for_status()
 
             response.raise_for_status()
@@ -110,18 +111,15 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
             critic_certified = bool(soup.select_one("score-icon-critics[certified='true']"))
             audience_certified = bool(soup.select_one("score-icon-audience[certified='true']"))
 
-            # If the year-based URL resulted in a 404, correct the URL to the base URL
-            corrected_url = base_url if response.status_code == 404 else url
-
             # Log the correct URL
-            print(f"Successfully fetched Rotten Tomatoes data from: {corrected_url}")  # Console log
+            print(f"Successfully fetched Rotten Tomatoes data from: {url}")  # Console log
 
             return {
                 "critic_score": critic_score.text.strip() if critic_score else "N/A",
                 "audience_score": audience_score.text.strip() if audience_score else "N/A",
                 "critic_certified_fresh": critic_certified,
                 "audience_certified_fresh": audience_certified,
-                "rotten_tomatoes_url": corrected_url  # Correct URL without the year if needed
+                "rotten_tomatoes_url": url  # Correct URL without the year if needed
             }
         except requests.RequestException as e:
             print(f"Error fetching data for {url}: {e}")  # Console log
@@ -135,6 +133,7 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
         "audience_certified_fresh": False,
         "rotten_tomatoes_url": "N/A"
     }
+
 
 
     
