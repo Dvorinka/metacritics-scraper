@@ -204,19 +204,25 @@ def scrape_csfd(title, is_tv_show=False):
 
     soup = BeautifulSoup(response.text, 'html.parser')
 
-    csfd_rating = soup.find("h2", class_="average")
+    csfd_rating = soup.find("div", class_="film-rating-average")
     csfd_rating = csfd_rating.text.strip() if csfd_rating else "N/A"
 
-    best_rank = soup.find("a", href=lambda href: href and "nejlepsi" in href)
-    best_rank = best_rank.text.strip() if best_rank else "N/A"
-
-    fav_rank = soup.find("a", href=lambda href: href and "nejoblibenejsi" in href)
-    fav_rank = fav_rank.text.strip() if fav_rank else "N/A"
-
+    rankings = soup.find_all("div", class_="film-ranking")
+    best_rank = "N/A"
+    fav_rank = "N/A"
+    
+    for rank in rankings:
+        text = rank.text.strip()
+        if "nejlepší" in text:
+            best_rank = text
+        elif "nejoblíbenější" in text:
+            fav_rank = text
+    
     return {
         "csfd_rating": csfd_rating,
         "csfd_best_rank": best_rank,
-        "csfd_fav_rank": fav_rank
+        "csfd_fav_rank": fav_rank,
+        "csfd_url": movie_url
     }
 
     
