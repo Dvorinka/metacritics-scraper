@@ -155,68 +155,6 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
         "rotten_tomatoes_url": "N/A"
     }
 
-def search_csfd(title, year=None):
-    """Search CSFD for the given title and year, return the first film URL."""
-    query = f"{title}"
-    if year:
-        query += f" {year}"
-    params = {
-        'q': query,
-        'creators': 0,
-        'users': 0
-    }
-    try:
-        response = requests.get('https://www.csfd.cz/hledat/', params=params, headers=HEADERS, timeout=10)
-        response.raise_for_status()
-    except requests.RequestException as e:
-        print(f"Error searching CSFD: {e}")
-        return None
-    soup = BeautifulSoup(response.text, 'html.parser')
-    films = soup.select('.main-movies .film-thumb a.film-thumb-mask')
-    if films:
-        film_path = films[0]['href']
-        return f"https://www.csfd.cz{film_path}"
-    return None
-
-def scrape_csfd(url):
-    """Scrape CSFD movie page for ratings and rankings."""
-    try:
-        response = requests.get(url, headers=HEADERS, timeout=10)
-        response.raise_for_status()
-    except requests.RequestException as e:
-        print(f"Error fetching CSFD page: {e}")
-        return None
-    soup = BeautifulSoup(response.text, 'html.parser')
-    
-    # Extract average rating
-    average_rating_div = soup.find('div', class_='film-rating-average')
-    average_rating = average_rating_div.get_text(strip=True).strip('%') if average_rating_div else 'N/A'
-    
-    # Initialize rankings
-    best_ranking = 'N/A'
-    popular_ranking = 'N/A'
-    
-    # Extract rankings
-    for div in soup.find_all('div', class_='film-ranking'):
-        text = div.get_text(strip=True)
-        if 'nejlepší' in text:
-            parts = text.split()
-            if parts:
-                number_str = parts[0].replace('.', '')
-                best_ranking = int(number_str) if number_str.isdigit() else 'N/A'
-        elif 'nejoblíbenější' in text:
-            parts = text.split()
-            if parts:
-                number_str = parts[0].replace('.', '')
-                popular_ranking = int(number_str) if number_str.isdigit() else 'N/A'
-    
-    return {
-        'average_rating': average_rating,
-        'best_ranking': best_ranking,
-        'popular_ranking': popular_ranking,
-        'csfd_url': url
-    }
-
     
 def get_tmdb_data(category, tmdb_id):
     """Fetches movie/TV show data from TMDB."""
@@ -251,20 +189,10 @@ def get_movie_data(category: str, tmdb_id: int):
     # Rotten Tomatoes
     rotten_tomatoes_data = scrape_rotten_tomatoes(category, title, release_year)
 
-    # CSFD
-    csfd_url = search_csfd(title, release_year)
-    csfd_data = scrape_csfd(csfd_url) if csfd_url else None
-
     return {
         "tmdb": tmdb_data,
         "metacritic": metacritic_data,
-        "rotten_tomatoes": rotten_tomatoes_data,
-        "csfd": csfd_data or {
-            "average_rating": "N/A",
-            "best_ranking": "N/A",
-            "popular_ranking": "N/A",
-            "csfd_url": "N/A"
-        }
+        "rotten_tomatoes": rotten_tomatoes_data
     }
 
 if __name__ == "__main__":
