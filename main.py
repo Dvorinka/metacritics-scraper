@@ -190,10 +190,10 @@ def scrape_csfd(title):
     csfd_rating = csfd_rating.text.strip() if csfd_rating else 'N/A'
 
     # Extract rankings
-    best_rank = soup.find('a', href=True, text='nejlepší')
+    best_rank = soup.find('a', href=True, string='nejlepší')
     best_rank = best_rank.text.strip() if best_rank else 'N/A'
 
-    fav_rank = soup.find('a', href=True, text='nejoblíbenější')
+    fav_rank = soup.find('a', href=True, string='nejoblíbenější')
     fav_rank = fav_rank.text.strip() if fav_rank else 'N/A'
 
     return {
