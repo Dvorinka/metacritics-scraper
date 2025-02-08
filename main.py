@@ -136,6 +136,7 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
         "rotten_tomatoes_url": "N/A"
     }
 
+
     
 def get_tmdb_data(category, tmdb_id):
     """Fetches movie/TV show data from TMDB."""
