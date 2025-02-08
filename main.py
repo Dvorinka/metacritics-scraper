@@ -93,7 +93,7 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
             response = requests.get(url, headers=HEADERS, timeout=10)
             if response.status_code == 404:
                 print(f"404 error for {url}, trying next URL...")  # Console log
-                continue  # Try the next URL if 404
+                continue  # Move to the next URL if 404
 
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
@@ -118,7 +118,7 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
             print(f"Error fetching data for {url}: {e}")  # Console log
             continue  # Try the next URL if there's an error
 
-    # Try searching if no page is found
+    # If no URLs worked, search for the title
     search_url = f"https://www.rottentomatoes.com/search?search={title_slug}"
     print(f"Trying search for {title_slug} on Rotten Tomatoes.")  # Console log
     try:
