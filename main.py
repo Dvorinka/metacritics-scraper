@@ -92,8 +92,10 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
         try:
             response = requests.get(url, headers=HEADERS, timeout=10)
             if response.status_code == 404:
-                print(f"404 error for {url}, trying next URL...")  # Console log
-                continue  # Move to the next URL if 404
+                print(f"404 error for {url}, trying base URL...")  # Console log
+                # Try the base URL without the year
+                response = requests.get(base_url, headers=HEADERS, timeout=10)
+                response.raise_for_status()
 
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
@@ -118,22 +120,7 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
             print(f"Error fetching data for {url}: {e}")  # Console log
             continue  # Try the next URL if there's an error
 
-    # If no URLs worked, search for the title
-    search_url = f"https://www.rottentomatoes.com/search?search={title_slug}"
-    print(f"Trying search for {title_slug} on Rotten Tomatoes.")  # Console log
-    try:
-        search_response = requests.get(search_url, headers=HEADERS, timeout=10)
-        search_response.raise_for_status()
-        search_soup = BeautifulSoup(search_response.text, 'html.parser')
-        search_result = search_soup.find('a', href=True, class_="sc-16f5xv5-0 gsyjbv")
-
-        if search_result:
-            movie_url = f"https://www.rottentomatoes.com{search_result['href']}"
-            print(f"Found search result: {movie_url}")  # Console log
-            return scrape_rotten_tomatoes(category, title, release_year)
-    except requests.RequestException:
-        print(f"Error searching for {title_slug} on Rotten Tomatoes.")  # Console log
-        
+    # If all attempts fail, return default values
     return {
         "critic_score": "N/A",
         "audience_score": "N/A",
@@ -141,6 +128,7 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
         "audience_certified_fresh": False,
         "rotten_tomatoes_url": "N/A"
     }
+
 
 def get_tmdb_data(category, tmdb_id):
     """Fetches movie/TV show data from TMDB."""
