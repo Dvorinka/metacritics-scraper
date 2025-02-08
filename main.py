@@ -114,9 +114,17 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
             critic_score = soup.select_one('rt-text[slot="criticsScore"]')
             audience_score = soup.select_one('rt-text[slot="audienceScore"]')
 
-            # Extract Certified Fresh Status
-            critic_certified = bool(soup.select_one("score-icon-critics[certified='true']"))
-            audience_certified = bool(soup.select_one("score-icon-audience[certified='true']"))
+            # Adjust extraction for certification status
+            critic_certified = False
+            audience_certified = False
+
+            critic_certified_tag = soup.find('score-icon-critics')
+            if critic_certified_tag and critic_certified_tag.get('certified') == 'true':
+                critic_certified = True
+
+            audience_certified_tag = soup.find('score-icon-audience')
+            if audience_certified_tag and audience_certified_tag.get('certified') == 'true':
+                audience_certified = True
 
             # Log the correct URL
             print(f"Successfully fetched Rotten Tomatoes data from: {url}")  # Console log
