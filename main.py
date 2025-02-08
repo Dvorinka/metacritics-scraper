@@ -155,6 +155,70 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
         "rotten_tomatoes_url": "N/A"
     }
 
+def scrape_csfd(title, is_tv_show=False):
+    """Scrapes CSFD for ratings and rankings (best and most popular)."""
+    print(f"Scraping CSFD for: {title} (TV Show: {is_tv_show})")  # Console log
+
+    if is_tv_show:
+        search_url = f"https://www.csfd.cz/hledat/?q={title.replace(' ', '%20')}&films=0&creators=0&users=0"
+    else:
+        search_url = f"https://www.csfd.cz/hledat/?q={title.replace(' ', '%20')}&series=0&creators=0&users=0"
+
+    try:
+        response = requests.get(search_url, headers=HEADERS, timeout=10)
+        response.raise_for_status()
+    except requests.RequestException:
+        print(f"Error fetching CSFD search page for {title}")
+        return {"csfd_rating": "N/A", "csfd_best_rank": "N/A", "csfd_fav_rank": "N/A"}
+
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    if is_tv_show:
+        results_section = soup.find("div", {"id": "snippet--containerSeries"})
+    else:
+        results_section = soup.find("div", {"id": "snippet--containerFilms"})
+
+    if not results_section:
+        print(f"No results found for {title} on CSFD.")
+        return {"csfd_rating": "N/A", "csfd_best_rank": "N/A", "csfd_fav_rank": "N/A"}
+
+    first_result = results_section.find("article", class_="article-poster-50")
+
+    if not first_result:
+        print(f"No valid { 'TV show' if is_tv_show else 'movie' } found.")
+        return {"csfd_rating": "N/A", "csfd_best_rank": "N/A", "csfd_fav_rank": "N/A"}
+
+    movie_link_tag = first_result.find("a", href=True)
+    if movie_link_tag:
+        movie_url = f"https://www.csfd.cz{movie_link_tag['href']}"
+    else:
+        print("Could not extract movie link from CSFD.")
+        return {"csfd_rating": "N/A", "csfd_best_rank": "N/A", "csfd_fav_rank": "N/A"}
+
+    try:
+        response = requests.get(movie_url, headers=HEADERS, timeout=10)
+        response.raise_for_status()
+    except requests.RequestException:
+        print(f"Error fetching details page from CSFD for {title}")
+        return {"csfd_rating": "N/A", "csfd_best_rank": "N/A", "csfd_fav_rank": "N/A"}
+
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    csfd_rating = soup.find("h2", class_="average")
+    csfd_rating = csfd_rating.text.strip() if csfd_rating else "N/A"
+
+    best_rank = soup.find("a", href=lambda href: href and "nejlepsi" in href)
+    best_rank = best_rank.text.strip() if best_rank else "N/A"
+
+    fav_rank = soup.find("a", href=lambda href: href and "nejoblibenejsi" in href)
+    fav_rank = fav_rank.text.strip() if fav_rank else "N/A"
+
+    return {
+        "csfd_rating": csfd_rating,
+        "csfd_best_rank": best_rank,
+        "csfd_fav_rank": fav_rank
+    }
+
     
 def get_tmdb_data(category, tmdb_id):
     """Fetches movie/TV show data from TMDB."""
@@ -189,10 +253,13 @@ def get_movie_data(category: str, tmdb_id: int):
     # Rotten Tomatoes
     rotten_tomatoes_data = scrape_rotten_tomatoes(category, title, release_year)
 
+    csfd_data = scrape_csfd(title, is_tv_show=(category == "tv"))
+
     return {
         "tmdb": tmdb_data,
         "metacritic": metacritic_data,
-        "rotten_tomatoes": rotten_tomatoes_data
+        "rotten_tomatoes": rotten_tomatoes_data,
+        "csfd": csfd_data
     }
 
 if __name__ == "__main__":
