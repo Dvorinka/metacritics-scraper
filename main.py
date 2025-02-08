@@ -32,14 +32,17 @@ HEADERS = {
 # Serve the documentation HTML page
 @app.get("/")
 def read_root():
+    print("Serving the root page.")  # Console log
     return FileResponse("index.html")
 
 def scrape_metacritic(url):
     """Scrapes Metacritic scores from the given URL."""
+    print(f"Scraping Metacritic for URL: {url}")  # Console log
     try:
         response = requests.get(url, headers=HEADERS, timeout=10)
         response.raise_for_status()
     except requests.RequestException:
+        print(f"Error fetching Metacritic data from {url}")  # Console log
         return {"metascore": "N/A", "userscore": "N/A"}
 
     soup = BeautifulSoup(response.text, 'html.parser')
@@ -72,6 +75,7 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
     elif category == "tv":
         base_url = f"https://www.rottentomatoes.com/tv/{title_slug}"
     else:
+        print(f"Invalid category {category}")  # Console log
         return {
             "critic_score": "N/A",
             "audience_score": "N/A",
@@ -84,11 +88,11 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
     urls_to_try = [url_with_year] if url_with_year else [base_url]
 
     for url in urls_to_try:
+        print(f"Trying Rotten Tomatoes URL: {url}")  # Console log
         try:
-            print(f"Trying URL: {url}")  # Debugging line
             response = requests.get(url, headers=HEADERS, timeout=10)
             if response.status_code == 404:
-                print(f"404 error for {url}, trying next URL...")
+                print(f"404 error for {url}, trying next URL...")  # Console log
                 continue  # Try the next URL if 404
 
             response.raise_for_status()
@@ -102,6 +106,7 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
             critic_certified = bool(soup.select_one("score-icon-critics[certified='true']"))
             audience_certified = bool(soup.select_one("score-icon-audience[certified='true']"))
 
+            print(f"Successfully fetched Rotten Tomatoes data from: {url}")  # Console log
             return {
                 "critic_score": critic_score.text.strip() if critic_score else "N/A",
                 "audience_score": audience_score.text.strip() if audience_score else "N/A",
@@ -110,11 +115,12 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
                 "rotten_tomatoes_url": url
             }
         except requests.RequestException as e:
-            print(f"Error fetching data for {url}: {e}")  # Debugging line
+            print(f"Error fetching data for {url}: {e}")  # Console log
             continue  # Try the next URL if there's an error
 
     # Try searching if no page is found
     search_url = f"https://www.rottentomatoes.com/search?search={title_slug}"
+    print(f"Trying search for {title_slug} on Rotten Tomatoes.")  # Console log
     try:
         search_response = requests.get(search_url, headers=HEADERS, timeout=10)
         search_response.raise_for_status()
@@ -123,10 +129,10 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
 
         if search_result:
             movie_url = f"https://www.rottentomatoes.com{search_result['href']}"
-            print(f"Found search result: {movie_url}")
+            print(f"Found search result: {movie_url}")  # Console log
             return scrape_rotten_tomatoes(category, title, release_year)
     except requests.RequestException:
-        print(f"Error searching for {title_slug} on Rotten Tomatoes.")
+        print(f"Error searching for {title_slug} on Rotten Tomatoes.")  # Console log
         
     return {
         "critic_score": "N/A",
@@ -138,18 +144,27 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
 
 def get_tmdb_data(category, tmdb_id):
     """Fetches movie/TV show data from TMDB."""
+    print(f"Fetching TMDB data for {category} with ID: {tmdb_id}")  # Console log
     url = f"{TMDB_BASE_URL}{category}/{tmdb_id}?api_key={TMDB_API_KEY}"
     response = requests.get(url)
-    return response.json() if response.status_code == 200 else None
+    if response.status_code == 200:
+        print(f"TMDB data found for {category} ID: {tmdb_id}")  # Console log
+        return response.json()
+    else:
+        print(f"Error fetching TMDB data for {category} ID: {tmdb_id}")  # Console log
+        return None
 
 @app.get("/{category}/{tmdb_id}")
 def get_movie_data(category: str, tmdb_id: int):
+    print(f"Received request for {category} with TMDB ID: {tmdb_id}")  # Console log
     if category not in ["movie", "tv"]:
+        print(f"Invalid category: {category}")  # Console log
         return {"error": "Invalid category"}
 
     # Get TMDB data
     tmdb_data = get_tmdb_data(category, tmdb_id)
     if not tmdb_data:
+        print(f"No TMDB data found for ID: {tmdb_id}")  # Console log
         return {"error": "TMDB data not found"}
 
     title = tmdb_data.get("title", tmdb_data.get("name", ""))
@@ -171,4 +186,5 @@ def get_movie_data(category: str, tmdb_id: int):
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8080))  # Use Railway's PORT or default to 8000
+    print(f"Starting FastAPI server on port {port}")  # Console log
     uvicorn.run(app, host="0.0.0.0", port=port)
