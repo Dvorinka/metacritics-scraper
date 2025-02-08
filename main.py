@@ -108,13 +108,15 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
             critic_certified = bool(soup.select_one("score-icon-critics[certified='true']"))
             audience_certified = bool(soup.select_one("score-icon-audience[certified='true']"))
 
-            print(f"Successfully fetched Rotten Tomatoes data from: {url}")  # Console log
+            # Log the correct URL
+            print(f"Successfully fetched Rotten Tomatoes data from: {base_url}")  # Console log
+
             return {
                 "critic_score": critic_score.text.strip() if critic_score else "N/A",
                 "audience_score": audience_score.text.strip() if audience_score else "N/A",
                 "critic_certified_fresh": critic_certified,
                 "audience_certified_fresh": audience_certified,
-                "rotten_tomatoes_url": url
+                "rotten_tomatoes_url": base_url  # Use the base URL here, not the year-based one
             }
         except requests.RequestException as e:
             print(f"Error fetching data for {url}: {e}")  # Console log
