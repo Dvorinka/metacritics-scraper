@@ -43,7 +43,7 @@ def scrape_metacritic(url):
         response.raise_for_status()
     except requests.RequestException:
         print(f"Error fetching Metacritic data from {url}")  # Console log
-        return {"metascore": "N/A", "userscore": "N/A"}
+        return {"metascore": "N/A", "userscore": "N/A", "metacritic_certified": False, "metacritic_url": url}
 
     soup = BeautifulSoup(response.text, 'html.parser')
 
@@ -60,10 +60,17 @@ def scrape_metacritic(url):
             return span.text.strip() if span else 'N/A'
         return 'N/A'
 
+    # Check for the "Must See" badge
+    must_see_badge = soup.find('img', class_="c-productScoreInfo_must")
+    metacritic_certified = bool(must_see_badge)
+
     return {
         "metascore": get_score('meta'),
-        "userscore": get_score('user')
+        "userscore": get_score('user'),
+        "metacritic_certified": metacritic_certified,
+        "metacritic_url": url
     }
+
 
 def scrape_rotten_tomatoes(category, title, release_year=None):
     """Scrapes Rotten Tomatoes critic and audience scores, along with certification status."""
