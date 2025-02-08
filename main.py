@@ -155,51 +155,66 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
         "rotten_tomatoes_url": "N/A"
     }
 
-def scrape_csfd(title):
-    """Scrapes CSFD for ratings and rankings (best and most popular)."""
-    print(f"Scraping CSFD for movie: {title}")  # Console log
-    search_url = f"https://www.csfd.cz/hledat/?q={title.replace(' ', '%20')}&creators=0&users=0"
+def search_csfd(title, year=None):
+    """Search CSFD for the given title and year, return the first film URL."""
+    query = f"{title}"
+    if year:
+        query += f" {year}"
+    params = {
+        'q': query,
+        'creators': 0,
+        'users': 0
+    }
     try:
-        response = requests.get(search_url, headers=HEADERS, timeout=10)
+        response = requests.get('https://www.csfd.cz/hledat/', params=params, headers=HEADERS, timeout=10)
         response.raise_for_status()
-    except requests.RequestException:
-        print(f"Error fetching CSFD data for {title}")  # Console log
-        return {"csfd_rating": "N/A", "csfd_best_rank": "N/A", "csfd_fav_rank": "N/A"}
+    except requests.RequestException as e:
+        print(f"Error searching CSFD: {e}")
+        return None
+    soup = BeautifulSoup(response.text, 'html.parser')
+    films = soup.select('.main-movies .film-thumb a.film-thumb-mask')
+    if films:
+        film_path = films[0]['href']
+        return f"https://www.csfd.cz{film_path}"
+    return None
 
+def scrape_csfd(url):
+    """Scrape CSFD movie page for ratings and rankings."""
+    try:
+        response = requests.get(url, headers=HEADERS, timeout=10)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        print(f"Error fetching CSFD page: {e}")
+        return None
     soup = BeautifulSoup(response.text, 'html.parser')
     
-    # Find the first movie result from search
-    movie_link = soup.find('a', href=True, string=True)
-    if movie_link:
-        movie_url = f"https://www.csfd.cz{movie_link['href']}"
-    else:
-        print("No movie found on CSFD search.")  # Console log
-        return {"csfd_rating": "N/A", "csfd_best_rank": "N/A", "csfd_fav_rank": "N/A"}
-
-    try:
-        response = requests.get(movie_url, headers=HEADERS, timeout=10)
-        response.raise_for_status()
-    except requests.RequestException:
-        print(f"Error fetching movie page from CSFD for {title}")  # Console log
-        return {"csfd_rating": "N/A", "csfd_best_rank": "N/A", "csfd_fav_rank": "N/A"}
-
-    soup = BeautifulSoup(response.text, 'html.parser')
-
-    # Extract the CSFD rating
-    csfd_rating = soup.find('div', class_='film-rating-average')
-    csfd_rating = csfd_rating.text.strip() if csfd_rating else 'N/A'
-
+    # Extract average rating
+    average_rating_div = soup.find('div', class_='film-rating-average')
+    average_rating = average_rating_div.get_text(strip=True).strip('%') if average_rating_div else 'N/A'
+    
+    # Initialize rankings
+    best_ranking = 'N/A'
+    popular_ranking = 'N/A'
+    
     # Extract rankings
-    best_rank = soup.find('a', href=True, string='nejlepší')
-    best_rank = best_rank.text.strip() if best_rank else 'N/A'
-
-    fav_rank = soup.find('a', href=True, string='nejoblíbenější')
-    fav_rank = fav_rank.text.strip() if fav_rank else 'N/A'
-
+    for div in soup.find_all('div', class_='film-ranking'):
+        text = div.get_text(strip=True)
+        if 'nejlepší' in text:
+            parts = text.split()
+            if parts:
+                number_str = parts[0].replace('.', '')
+                best_ranking = int(number_str) if number_str.isdigit() else 'N/A'
+        elif 'nejoblíbenější' in text:
+            parts = text.split()
+            if parts:
+                number_str = parts[0].replace('.', '')
+                popular_ranking = int(number_str) if number_str.isdigit() else 'N/A'
+    
     return {
-        "csfd_rating": csfd_rating,
-        "csfd_best_rank": best_rank,
-        "csfd_fav_rank": fav_rank
+        'average_rating': average_rating,
+        'best_ranking': best_ranking,
+        'popular_ranking': popular_ranking,
+        'csfd_url': url
     }
 
     
@@ -217,38 +232,41 @@ def get_tmdb_data(category, tmdb_id):
 
 @app.get("/{category}/{tmdb_id}")
 def get_movie_data(category: str, tmdb_id: int):
-    print(f"Received request for {category} with TMDB ID: {tmdb_id}")  # Console log
+    print(f"Received request for {category} with TMDB ID: {tmdb_id}")
     if category not in ["movie", "tv"]:
-        print(f"Invalid category: {category}")  # Console log
         return {"error": "Invalid category"}
 
-    # Get TMDB data
     tmdb_data = get_tmdb_data(category, tmdb_id)
     if not tmdb_data:
-        print(f"No TMDB data found for ID: {tmdb_id}")  # Console log
         return {"error": "TMDB data not found"}
 
     title = tmdb_data.get("title", tmdb_data.get("name", ""))
     release_year = tmdb_data.get("release_date", tmdb_data.get("first_air_date", ""))[:4]
 
-    # Get Metacritic scores
+    # Metacritic
     title_slug = title.lower().replace(" ", "-")
     metacritic_url = f"https://www.metacritic.com/{category}/{title_slug}"
     metacritic_data = scrape_metacritic(metacritic_url)
 
-    # Get Rotten Tomatoes scores
+    # Rotten Tomatoes
     rotten_tomatoes_data = scrape_rotten_tomatoes(category, title, release_year)
 
-    csfd_data = scrape_csfd(title)
+    # CSFD
+    csfd_url = search_csfd(title, release_year)
+    csfd_data = scrape_csfd(csfd_url) if csfd_url else None
 
     return {
         "tmdb": tmdb_data,
         "metacritic": metacritic_data,
         "rotten_tomatoes": rotten_tomatoes_data,
-        "csfd": csfd_data
+        "csfd": csfd_data or {
+            "average_rating": "N/A",
+            "best_ranking": "N/A",
+            "popular_ranking": "N/A",
+            "csfd_url": "N/A"
+        }
     }
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8080))  # Use Railway's PORT or default to 8000
-    print(f"Starting FastAPI server on port {port}")  # Console log
+    port = int(os.getenv("PORT", 8080))
     uvicorn.run(app, host="0.0.0.0", port=port)
