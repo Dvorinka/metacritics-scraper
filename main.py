@@ -155,6 +155,53 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
         "rotten_tomatoes_url": "N/A"
     }
 
+def scrape_csfd(title):
+    """Scrapes CSFD for ratings and rankings (best and most popular)."""
+    print(f"Scraping CSFD for movie: {title}")  # Console log
+    search_url = f"https://www.csfd.cz/hledat/?q={title.replace(' ', '%20')}&creators=0&users=0"
+    try:
+        response = requests.get(search_url, headers=HEADERS, timeout=10)
+        response.raise_for_status()
+    except requests.RequestException:
+        print(f"Error fetching CSFD data for {title}")  # Console log
+        return {"csfd_rating": "N/A", "csfd_best_rank": "N/A", "csfd_fav_rank": "N/A"}
+
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    # Find the first movie result from search
+    movie_link = soup.find('a', href=True, text=True)
+    if movie_link:
+        movie_url = f"https://www.csfd.cz{movie_link['href']}"
+    else:
+        print("No movie found on CSFD search.")  # Console log
+        return {"csfd_rating": "N/A", "csfd_best_rank": "N/A", "csfd_fav_rank": "N/A"}
+
+    try:
+        response = requests.get(movie_url, headers=HEADERS, timeout=10)
+        response.raise_for_status()
+    except requests.RequestException:
+        print(f"Error fetching movie page from CSFD for {title}")  # Console log
+        return {"csfd_rating": "N/A", "csfd_best_rank": "N/A", "csfd_fav_rank": "N/A"}
+
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    # Extract the CSFD rating
+    csfd_rating = soup.find('div', class_='film-rating-average')
+    csfd_rating = csfd_rating.text.strip() if csfd_rating else 'N/A'
+
+    # Extract rankings
+    best_rank = soup.find('a', href=True, text='nejlepší')
+    best_rank = best_rank.text.strip() if best_rank else 'N/A'
+
+    fav_rank = soup.find('a', href=True, text='nejoblíbenější')
+    fav_rank = fav_rank.text.strip() if fav_rank else 'N/A'
+
+    return {
+        "csfd_rating": csfd_rating,
+        "csfd_best_rank": best_rank,
+        "csfd_fav_rank": fav_rank
+    }
+
     
 def get_tmdb_data(category, tmdb_id):
     """Fetches movie/TV show data from TMDB."""
@@ -192,10 +239,13 @@ def get_movie_data(category: str, tmdb_id: int):
     # Get Rotten Tomatoes scores
     rotten_tomatoes_data = scrape_rotten_tomatoes(category, title, release_year)
 
+    csfd_data = scrape_csfd(title)
+
     return {
         "tmdb": tmdb_data,
         "metacritic": metacritic_data,
-        "rotten_tomatoes": rotten_tomatoes_data
+        "rotten_tomatoes": rotten_tomatoes_data,
+        "csfd": csfd_data
     }
 
 if __name__ == "__main__":
