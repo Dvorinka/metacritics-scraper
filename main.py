@@ -169,7 +169,7 @@ def scrape_csfd(title):
     soup = BeautifulSoup(response.text, 'html.parser')
     
     # Find the first movie result from search
-    movie_link = soup.find('a', href=True, text=True)
+    movie_link = soup.find('a', href=True, string=True)
     if movie_link:
         movie_url = f"https://www.csfd.cz{movie_link['href']}"
     else:
