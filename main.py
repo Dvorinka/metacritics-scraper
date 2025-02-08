@@ -110,15 +110,18 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
             critic_certified = bool(soup.select_one("score-icon-critics[certified='true']"))
             audience_certified = bool(soup.select_one("score-icon-audience[certified='true']"))
 
+            # Correct the URL if it includes the year suffix
+            corrected_url = url.split("_")[0] if "_" in url else url
+
             # Log the correct URL
-            print(f"Successfully fetched Rotten Tomatoes data from: {url}")  # Console log
+            print(f"Successfully fetched Rotten Tomatoes data from: {corrected_url}")  # Console log
 
             return {
                 "critic_score": critic_score.text.strip() if critic_score else "N/A",
                 "audience_score": audience_score.text.strip() if audience_score else "N/A",
                 "critic_certified_fresh": critic_certified,
                 "audience_certified_fresh": audience_certified,
-                "rotten_tomatoes_url": url  # Correct URL based on what was fetched
+                "rotten_tomatoes_url": corrected_url  # Correct URL without the year
             }
         except requests.RequestException as e:
             print(f"Error fetching data for {url}: {e}")  # Console log
@@ -132,6 +135,7 @@ def scrape_rotten_tomatoes(category, title, release_year=None):
         "audience_certified_fresh": False,
         "rotten_tomatoes_url": "N/A"
     }
+
     
 def get_tmdb_data(category, tmdb_id):
     """Fetches movie/TV show data from TMDB."""
